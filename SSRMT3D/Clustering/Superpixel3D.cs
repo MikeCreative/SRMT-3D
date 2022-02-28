@@ -178,6 +178,27 @@ namespace SSRMT3D
             }
         }
 
+        public void updateClusterColour() {
+            long[] sum = new long[clusters.Count];      // Variable to hold x,y,z positions of pixels
+            int[] count = new int[clusters.Count];          // Variable to number of pixels in cluster
+            // Iterate through all pixels in cluster
+            for (int xi = 0; xi < x; xi++) {
+                for (int yi = 0; yi < y; yi++) {
+                    for (int zi = 0; zi < z; zi++) {
+                        if (tag[xi, yi, zi] > count.Length) { continue; }
+                        sum[tag[xi, yi, zi]] += MainWindow.imageStack[xi, yi, zi];
+                        count[tag[xi, yi, zi]] += 1;
+                    }
+                }
+            }
+
+            // Divide sum value above by count to get average
+            for (int i = 0; i < clusters.Count; i++) {
+                if (count[i] == 0) { continue; }
+                clusters[i].grey = (byte)(sum[i] / count[i]);
+            }
+        }
+
         // Repalce the colour of each pixel in a cluster by the colour of the cluster's center
         public void averageColourCluster() {
             for (int xi = 0; xi < x; xi++) {
@@ -200,7 +221,7 @@ namespace SSRMT3D
             this.K = K;
 
             N = x * y * z;                      // Total Number of Pixels
-            int S = (int)Math.Cbrt(K);         // Calculate Superpixels per axis
+            int S = (int)Math.Cbrt(K);          // Calculate Superpixels per axis
             Sxy = x / S;
             Sz = z / S;
 
@@ -228,7 +249,7 @@ namespace SSRMT3D
             updateClusterMean();
         }
 
-        public int output(string outFolderDir) {
+        public int output(string outFolderDir, bool printToFolder) {
             // Set pixels to superpixel values
             averageColourCluster();
 
@@ -245,10 +266,49 @@ namespace SSRMT3D
                 MainWindow.outputStack.Add(outputImage);
             }
 
-            ReadWrite readWrite = new ReadWrite();
-            return readWrite.WriteImageStack(outFolderDir, z);
+            // Free Memory?
+            if (printToFolder) {
+                ReadWrite readWrite = new ReadWrite();
+                return readWrite.WriteImageStack(outFolderDir, z);
+            }
+            return 0;
+        }
+
+        // Getters
+        public SuperPixel getSuperPixel(int index) {
+            return clusters[index];
+        }
+
+        public int getClusterCount() {
+            return clusters.Count;
+        }
+
+        public int getTag(int x, int y, int z) {
+            return tag[x, y, z];
+        }
+
+        public void setTag(int x, int y, int z, byte value) {
+            tag[x, y, z] = value;
+        }
+
+        // Update Tag values by regions created through SRM. The regionArray array contains the updated superpixel for that index.
+        // I.e. If the tag = 5, it is the 5th index. This array position 5 will be the new superpixel
+        public void updateTagbyRegions(int[] regionArray) {
+            for (int i = 0; i < x; i++) {
+                for (int j = 0; j < y; j++) {
+                    for (int k = 0; k < z; k++) {
+                        int index = tag[i, j, k];
+                        if (index < regionArray.Length) {
+                            tag[i, j, k] = regionArray[tag[i, j, k]];
+                        }
+                    }
+                }
+            }
+            updateClusterColour();
         }
     }
+
+
 
     // Class to hold the superpixel clusters
     internal class SuperPixel

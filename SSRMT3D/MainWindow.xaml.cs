@@ -1,6 +1,7 @@
 ﻿using MahApps.Metro.Controls;
 using Microsoft.Toolkit.Uwp.Notifications;
 using Microsoft.Win32;
+using SSRMT3D.Dialogs;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -88,7 +89,8 @@ namespace SSRMT3D
             ReadWrite readWrite = new ReadWrite();
 
             // Read in Images
-            int readCount = readWrite.ReadImageStack(inFolderDir, inFiles, inFiles.Length, 0, inFiles.Length);
+            //int readCount = readWrite.ReadImageStack(inFolderDir, inFiles, inFiles.Length, 0, inFiles.Length);
+            int readCount = readWrite.ReadImageStack(inFolderDir, inFiles, inFiles.Length, 300, 350);
             updateText("Files converted to stack - Count: " + readCount);
 
             // Set Progress Bar
@@ -99,26 +101,43 @@ namespace SSRMT3D
             await Task.Run(() => superPixel3D.SLIC(2048, 50, readWrite.getX(), readWrite.getY(), readCount));
 
             // Iterate SLIC
-            for (int i = 0; i < 10; i++) {
+            for (int i = 0; i < 1; i++) {
                 await Task.Run(() => superPixel3D.iterate());
                 pgrsBar.Value += 10;
                 updateText("SLIC Iteration " + (i + 1));
             }
 
-            // Output SLIC
-            int writeCount = await Task.Run(() => superPixel3D.output(outFolderDir));
-
+            // Output SLIC - Print to Folder (If option selected)
+            int writeCount = await Task.Run(() => superPixel3D.output(outFolderDir, false));
             updateText("Algorithm Complete: " + writeCount + " files written to output directory");
+
+            // SRM
+            updateText("Beginning SRM Algorithm");
+            pgrsBar.Value = 0;
+            SRM3D srm3D = new SRM3D();
+            srm3D.Srm3D(superPixel3D, 25, readWrite.getX(), readWrite.getY(), readCount, false);
+
+            // Output SRM - Print to Folder (If option selected)
+            writeCount = await Task.Run(() => superPixel3D.output(outFolderDir, true));
+            updateText("SRM Algorithm Complete: " + writeCount + "files written to output directory");
+
 
             // Toast Notification to alert user
             new ToastContentBuilder()
                 .AddArgument("conversationId", 9813)
-                .AddText("SRM Complete!")
+                .AddText("SRMT3D Complete!")
                 .Show();
 
             // Reset Button
             pgrsBar.Value = 100;
             btnRun.IsEnabled = true;
+        }
+
+        private void btnOptions_Click(object sender, RoutedEventArgs e) {
+            Settings settingsDialog = new Settings();
+            settingsDialog.ShowInTaskbar = false;
+            settingsDialog.Owner = this;
+            settingsDialog.ShowDialog();
         }
     }
 }

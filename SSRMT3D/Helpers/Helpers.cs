@@ -6,6 +6,16 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
+
+/**
+ *  Helpers Class
+ *  Provides functions required by multiple algorithms.
+ * 
+ * 
+ * 
+ * 
+ */
+
 namespace SSRMT3D
 {
     public class Helpers
